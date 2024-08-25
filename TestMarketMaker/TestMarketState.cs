@@ -9,12 +9,12 @@ namespace TestMarketMaker;
 [TestFixture]
 public class TestMarketState
 {
-    private StateListener _state;
+    private MarketState _marketState;
 
     [SetUp]
     public void SetUp()
     {
-        _state = new StateListener();
+        _marketState = new MarketState();
     }
 
     [Test]
@@ -22,11 +22,11 @@ public class TestMarketState
     {
 
         Guid id = new Guid();
-        var order = AddOrder(id, _state);
+        var order = AddOrder(id, _marketState);
 
-        Assert.Contains(id, _state.Orders.Keys);
+        Assert.Contains(id, _marketState.Orders.Select(o => o.Id).ToList());
 
-        Assert.True(_state.Orders.Values.Any(newOrder => newOrder.TimeStamp == order.TimeStamp &&
+        Assert.True(_marketState.Orders.Any(newOrder => newOrder.TimeStamp == order.TimeStamp &&
                                                          newOrder.Quantity == order.Quantity &&
                                                          newOrder.User == order.User &&
                                                          newOrder.Price == order.Price &&
@@ -38,7 +38,7 @@ public class TestMarketState
     public void OrderShouldBeDeleted()
     {
         Guid id = new Guid();
-        var order = AddOrder(id, _state);
+        var order = AddOrder(id, _marketState);
 
         var marketEvent = new CancelMarketEvent
         {
@@ -47,9 +47,9 @@ public class TestMarketState
             User = "user",
         };
         
-        _state.RecordEvent(marketEvent);
+        _marketState.RecordEvent(marketEvent);
 
-        Assert.That(_state.Orders.ContainsKey(id), Is.False);
+        Assert.That(_marketState.TryGetOrder(id, out _), Is.False);
     }
 
     [Test]
@@ -59,21 +59,23 @@ public class TestMarketState
         
         foreach (var guid in ids)
         {
-            _state.Orders[guid] = new Order()
+            _marketState.RecordEvent(new NewOrderMarketEvent()
             {
                 Id = guid,
                 Price = 10,
                 Quantity = 10,
                 Symbol = "symbol",
                 TimeStamp = DateTime.Now,
+                TradesFilled = [],
+                TradesId = [],
+                TradesQuantity = [],
                 User = guid.ToString()[..3]
-            };
+            });
         }
 
         Guid id = Guid.NewGuid();
         var market = new NewOrderMarketEvent
         {
-            Filled = false,
             Id = id,
             Price = 10,
             Quantity = 25,
@@ -85,21 +87,21 @@ public class TestMarketState
             TradesQuantity = [-10, -10, -5],
         };
         
-        _state.RecordEvent(market);
+        _marketState.RecordEvent(market);
         
-        Assert.That(_state.Orders.ContainsKey(ids[0]), Is.False);
-        Assert.That(_state.Orders.ContainsKey(ids[1]), Is.False);
+        Assert.That(_marketState.TryGetOrder(ids[0], out _), Is.False);
+        Assert.That(_marketState.TryGetOrder(ids[1], out _), Is.False);
         
         
-        Assert.That(_state.Orders.ContainsKey(ids[2]), Is.True);
-        Assert.That(_state.Orders[ids[2]].Quantity, Is.EqualTo(5));
+        Assert.That(_marketState.TryGetOrder(ids[2], out _), Is.True);
+        _marketState.TryGetOrder(ids[2], out var order);
+        Assert.That(order.Quantity, Is.EqualTo(5));
     }
 
-    private NewOrderMarketEvent AddOrder(Guid id, StateListener listener, int price = 10)
+    private NewOrderMarketEvent AddOrder(Guid id, MarketState listener, int price = 10)
     {
         var order = new NewOrderMarketEvent
         {
-            Filled = false,
             Id = id,
             Price = price,
             Quantity = 1,

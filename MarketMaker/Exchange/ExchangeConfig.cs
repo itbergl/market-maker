@@ -1,6 +1,6 @@
 ﻿namespace MarketMaker.Exchange;
 
-public class ExchangeConfig
+public record ExchangeConfig
 {
    public bool CensorNames { get; set; } 
 }

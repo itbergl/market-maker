@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestMarketMaker", "TestMark
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BenchmarkMarketMaker", "BenchmarkMarketMaker\BenchmarkMarketMaker.csproj", "{87520014-28D4-44F5-AA16-14BC3CFB3030}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarketMaker.Contracts", "MarketMaker.Contracts\MarketMaker.Contracts.csproj", "{E03C7B2B-FC59-4540-89CA-CB3DCA7A465F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{87520014-28D4-44F5-AA16-14BC3CFB3030}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{87520014-28D4-44F5-AA16-14BC3CFB3030}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{87520014-28D4-44F5-AA16-14BC3CFB3030}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E03C7B2B-FC59-4540-89CA-CB3DCA7A465F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E03C7B2B-FC59-4540-89CA-CB3DCA7A465F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E03C7B2B-FC59-4540-89CA-CB3DCA7A465F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E03C7B2B-FC59-4540-89CA-CB3DCA7A465F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

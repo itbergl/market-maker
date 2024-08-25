@@ -6,7 +6,7 @@ public abstract class Request
 {
     public string Market;
     public string User;
-    public string ClientReference;
+    public string? ClientReference;
 }
 
 public class OrderRequest : Request

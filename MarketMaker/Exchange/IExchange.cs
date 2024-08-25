@@ -12,21 +12,20 @@ public class Exchange
     
     private readonly IMarket _market;
 
-    public readonly StateListener StateListener = new StateListener();
-    public readonly TransactionsListener TransactionsListener = new TransactionsListener();
-
     private readonly ExchangeConfig Config = new ExchangeConfig()
     {
         CensorNames = false, // temp TODO
     };
 
     private readonly IOrderValidator _validator;
+    public MarketState MarketState { get; }
 
-    public Exchange(IResponder responder, IMarket market, IOrderValidator validator)
+    public Exchange(IResponder responder, IMarket market, IOrderValidator validator, MarketState marketState)
     {
         _responder = responder;
         _market = market;
         _validator = validator;
+        MarketState = marketState;
     }
 
     public void HandleConfigUpdate(ConfigChange configChange)
@@ -36,13 +35,13 @@ public class Exchange
 
     public void HandleOrder(OrderRequest or)
     {
-        if (!_validator.ValidateOrder(StateListener, or, out var validationMessage))
+        if (!_validator.ValidateOrder(MarketState, or, out var validationMessage))
         {
-            _responder.HandleReject(new RejectResponse()
+            _responder.HandleReject(new Response<RejectResponse>()
             {
                 ClientReference = or.ClientReference,
                 User = or.User,
-                Message = validationMessage
+                Payload = new RejectResponse {Message = validationMessage}
             });
 
             return;
@@ -52,28 +51,30 @@ public class Exchange
 
         if (marketEvent is null)
         {
-            _responder.HandleReject(new RejectResponse()
+            _responder.HandleReject(new Response<RejectResponse>()
             {
                 ClientReference = or.ClientReference,
                 User = or.User,
-                Message = "internal error - order rejected"
+                Payload = new RejectResponse {Message = "internal error - order rejected"},
+                Market = or.Market
             });
          
             return;   
         }
 
-        EmitEvent(marketEvent, or.ClientReference);
+        EmitEvent(marketEvent, or);
     }
     
     public void HandleCancel(CancelRequest cr)
     {
-        if (!_validator.ValidateCancel(StateListener, cr, out var validationMessage))
+        if (!_validator.ValidateCancel(MarketState, cr, out var validationMessage))
         {
-            _responder.HandleReject(new RejectResponse()
+            _responder.HandleReject(new Response<RejectResponse>()
             {
                 ClientReference = cr.ClientReference,
                 User = cr.User,
-                Message = validationMessage
+                Market = cr.Market,
+                Payload = new RejectResponse {Message = validationMessage}
             });
 
             return;
@@ -81,21 +82,22 @@ public class Exchange
         
         var marketEvent = _market.HandleCancel(cr.User, cr.OrderId);
         
-        EmitEvent(marketEvent, cr.ClientReference);
+        EmitEvent(marketEvent, cr);
     }
     
-    private void EmitEvent(MarketEvent marketEvent, string clientReference)
+    private void EmitEvent(MarketEvent marketEvent, Request request)
     {
         _validator.HandleEvent(marketEvent);
-        StateListener.RecordEvent(marketEvent);
+        MarketState.RecordEvent(marketEvent);
         
         // TODO: client-ref
         marketEvent.User = Config.CensorNames ? CensoredName : marketEvent.User;
-        _responder.HandleEvent(new MarketEventResponse()
+        _responder.HandleEvent(new Response<MarketEvent>()
         {
-            ClientReference = clientReference,
+            ClientReference = request.ClientReference,
             User = marketEvent.User,
-            MarketEvent = marketEvent
+            Payload = marketEvent,
+            Market = request.Market
         });
     }
 }

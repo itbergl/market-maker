@@ -14,6 +14,7 @@ public class TestExchange
     private Exchange _exchange;
     private Mock<IResponder> _responderMock;
     private Mock<IOrderValidator> _validator;
+    private MarketState _marketState;
 
     [SetUp]
     public void Setup()
@@ -21,7 +22,8 @@ public class TestExchange
         _responderMock = new Mock<IResponder>();
         _market = new Mock<IMarket>();
         _validator = new Mock<IOrderValidator>();
-        _exchange = new Exchange(_responderMock.Object, _market.Object, _validator.Object);
+        _marketState = new MarketState();
+        _exchange = new Exchange(_responderMock.Object, _market.Object, _validator.Object, _marketState);
     }
 
     [Test]
@@ -34,7 +36,6 @@ public class TestExchange
             .Returns(new NewOrderMarketEvent()
             {
                User = user,
-               Filled = false,
                Id = Guid.NewGuid(),
                Price = price,
                Quantity = quantity,
@@ -54,13 +55,13 @@ public class TestExchange
         };
 
         var validationMessage = "";
-        _validator.Setup(v => v.ValidateOrder(It.IsAny<StateListener>(), orderRequest, out validationMessage))
+        _validator.Setup(v => v.ValidateOrder(It.IsAny<MarketState>(), orderRequest, out validationMessage))
             .Returns(true);
         
        _exchange.HandleOrder(orderRequest); 
        
-        _responderMock.Verify(r => r.HandleEvent(It.Is<MarketEventResponse>(response => 
-            string.Equals(response.User, user) && response.MarketEvent is NewOrderMarketEvent))); 
+        _responderMock.Verify(r => r.HandleEvent(It.Is<Response<MarketEvent>>(response => 
+            string.Equals(response.User, user) && response.Payload is NewOrderMarketEvent))); 
     }
     
     
@@ -78,12 +79,12 @@ public class TestExchange
         };
        
         var validationMessage = "validationMessage";
-        _validator.Setup(v => v.ValidateOrder(It.IsAny<StateListener>(), orderRequest, out validationMessage))
+        _validator.Setup(v => v.ValidateOrder(It.IsAny<MarketState>(), orderRequest, out validationMessage))
             .Returns(false);
         
        _exchange.HandleOrder(orderRequest); 
-        _responderMock.Verify(r => r.HandleReject(It.Is<RejectResponse>(response => 
-            string.Equals(response.User, user) && string.Equals(response.Message, validationMessage)))); 
+        _responderMock.Verify(r => r.HandleReject(It.Is<Response<RejectResponse>>(response => 
+            string.Equals(response.User, user) && string.Equals(response.Payload.Message, validationMessage)))); 
     }
     
     
@@ -108,13 +109,13 @@ public class TestExchange
         };
 
         var validationMessage = "";
-        _validator.Setup(v => v.ValidateCancel(It.IsAny<StateListener>(), cancelRequest, out validationMessage))
+        _validator.Setup(v => v.ValidateCancel(It.IsAny<MarketState>(), cancelRequest, out validationMessage))
             .Returns(true);
         
        _exchange.HandleCancel(cancelRequest); 
        
-        _responderMock.Verify(r => r.HandleEvent(It.Is<MarketEventResponse>(response => 
-            string.Equals(response.User, user) && response.MarketEvent is CancelMarketEvent))); 
+        _responderMock.Verify(r => r.HandleEvent(It.Is<Response<MarketEvent>>(response => 
+            string.Equals(response.User, user) && response.Payload is CancelMarketEvent))); 
     }
     
     
@@ -139,13 +140,13 @@ public class TestExchange
         };
 
         var validationMessage = "";
-        _validator.Setup(v => v.ValidateCancel(It.IsAny<StateListener>(), cancelRequest, out validationMessage))
+        _validator.Setup(v => v.ValidateCancel(It.IsAny<MarketState>(), cancelRequest, out validationMessage))
             .Returns(false);
         
        _exchange.HandleCancel(cancelRequest); 
        
-        _responderMock.Verify(r => r.HandleReject(It.Is<RejectResponse>(response => 
-            string.Equals(response.User, user) && string.Equals(response.Message, validationMessage)))); 
+        _responderMock.Verify(r => r.HandleReject(It.Is<Response<RejectResponse>>(response => 
+            string.Equals(response.User, user) && string.Equals(response.Payload.Message, validationMessage)))); 
     }
 
 }
