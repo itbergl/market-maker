@@ -6,9 +6,9 @@ namespace MarketMaker.ExchangeRules;
 public class ValidCancelRule : OrderValidator
 {
     // TODO: add DI to whole project
-    public override bool ValidateCancel(StateListener stateListener, CancelRequest cancelRequest, out string validationMessage)
+    public override bool ValidateCancel(IStateReader marketState, CancelRequest cancelRequest, out string validationMessage)
     {
-        if (!stateListener.Orders.TryGetValue(cancelRequest.OrderId, out var order))
+        if (!marketState.TryGetOrder(cancelRequest.OrderId, out var order))
         {
             validationMessage = $"Order with ID '{cancelRequest.OrderId}' does not exist";
             return false;

@@ -133,10 +133,10 @@ public MarketEvent NewOrder(string user, int requestedPrice, int quantity)
 
         return new NewOrderMarketEvent
         {
-            Filled = order.Quantity == 0,
             Id = order.Id,
             Price = (int)order.Price,
             Quantity = quantity,
+            User = order.User,
             Symbol = _symbol,
             TimeStamp = order.TimeStamp,
             TradesFilled = trades.Select(trade => trade.Item5).ToArray(),

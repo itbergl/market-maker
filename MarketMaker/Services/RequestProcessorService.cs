@@ -15,16 +15,18 @@ public class RequestProcessorService : BackgroundService
         _exchangeService = exchangeService;
     }
     
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
         {
             // todo: use blocking collection
-            _queue.GetRequest(out Request request);
+            // if (!_queue.GetRequest(out Request request))
+            // {
+            //     continue;
+            // }
+            var request = await _queue.GetRequestAsync(stoppingToken);
 
             _exchangeService.HandleRequest(request);
         }
-
-        return Task.CompletedTask;
     }
 }

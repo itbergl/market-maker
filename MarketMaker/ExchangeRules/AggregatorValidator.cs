@@ -16,13 +16,13 @@ public class AggregatorValidator : IOrderValidator
         };
     }
     
-    public bool ValidateOrder(StateListener stateListener, OrderRequest orderRequest, out string validationMessage)
+    public bool ValidateOrder(IStateReader marketState, OrderRequest orderRequest, out string validationMessage)
     {
         List<string> validationErrors = new();
         foreach (var validator in Validators)
         {
             // smells like a aggregator validator is needed, which needs a factory
-            if (!validator.ValidateOrder(stateListener, orderRequest, out var validationError)) {
+            if (!validator.ValidateOrder(marketState, orderRequest, out var validationError)) {
                 validationErrors.Add(validationError); 
             }
         }
@@ -37,13 +37,13 @@ public class AggregatorValidator : IOrderValidator
         return true;
     }
 
-    public bool ValidateCancel(StateListener stateListener, CancelRequest cancelRequest, out string validationMessage)
+    public bool ValidateCancel(IStateReader marketState, CancelRequest cancelRequest, out string validationMessage)
     {
         List<string> validationErrors = new();
         foreach (var validator in Validators)
         {
             // smells like a aggregator validator is needed, which needs a factory
-            if (!validator.ValidateCancel(stateListener, cancelRequest, out var validationError)) {
+            if (!validator.ValidateCancel(marketState, cancelRequest, out var validationError)) {
                 validationErrors.Add(validationError); 
             }
         }

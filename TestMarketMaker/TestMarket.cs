@@ -8,27 +8,27 @@ namespace TestMarketMaker;
 public class TestMarket
 {
    private Market _market;
-   private StateListener _state;
+   private MarketState _marketState;
 
    [SetUp]
    public void SetUp()
    {
       _market = new Market();
-      _state = new StateListener();
+      _marketState = new MarketState();
    }
 
    private Guid? NewOrder(string symbol, string user, int price, int quantity)
    {
        var resp = _market.HandleOrder(symbol, user, price, quantity);
        if (resp is null) return null;
-       _state.RecordEvent(resp);
+       _marketState.RecordEvent(resp);
        return resp.Id;
    }
    
    private bool NewCancel(string user, Guid id)
    {
        var resp = _market.HandleCancel(user, id);
-       _state.RecordEvent(resp);
+       _marketState.RecordEvent(resp);
        return true;
    }
    
@@ -36,7 +36,7 @@ public class TestMarket
    [Test]
    public void ShouldInitializeEmpty()
    {
-       Assert.That(_state.Orders, Is.Empty);
+       Assert.That(_marketState.Orders, Is.Empty);
    }
 
    [Test]
@@ -62,7 +62,7 @@ public class TestMarket
        
        Assert.That(id, Is.Not.Null);
        
-       Assert.That(_state.Orders.ContainsKey(id!.Value));
+       Assert.That(_marketState.TryGetOrder(id!.Value, out _));
    }
    
    // should be able to delete order
@@ -72,7 +72,7 @@ public class TestMarket
        var id = NewOrder("A", "userA", 10, 10)!.Value;
        NewCancel("userA", id);
        
-       Assert.That(_state.Orders.ContainsKey(id), Is.False);
+       Assert.That(_marketState.TryGetOrder(id, out _), Is.False);
    }
    
    // existing order should match and trade
@@ -85,8 +85,8 @@ public class TestMarket
 
        var newId = NewOrder("A", "userB", 10, -5 * side);
        
-       Assert.That(_state.Orders.ContainsKey(existingId!.Value), Is.False);
-       Assert.That(_state.Orders.ContainsKey(newId!.Value), Is.False);
+       Assert.That(_marketState.TryGetOrder(existingId!.Value, out _), Is.False);
+       Assert.That(_marketState.TryGetOrder(newId!.Value, out _), Is.False);
    }
    
    // existing order at lower price should match and trade
@@ -100,8 +100,8 @@ public class TestMarket
 
        var newId = NewOrder("A", "userB", price - side, -5 * side);
        
-       Assert.That(_state.Orders.ContainsKey(existingId!.Value), Is.False);
-       Assert.That(_state.Orders.ContainsKey(newId!.Value), Is.False);
+       Assert.That(_marketState.TryGetOrder(existingId!.Value, out _), Is.False);
+       Assert.That(_marketState.TryGetOrder(newId!.Value, out _), Is.False);
    }
    
    
@@ -125,13 +125,13 @@ public class TestMarket
    
        var newId = NewOrder("A", "userE", 10, quantity)!.Value;
 
-       var quantityAtLevel = _state.Orders.Values.Where(o => o.Price == 10).Sum(o => o.Quantity);
+       var quantityAtLevel = _marketState.Orders.Where(o => o.Price == 10).Sum(o => o.Quantity);
        
        Assert.That(quantityAtLevel, Is.EqualTo(quantity - side * 20));
 
        if (side == 1 && quantity <= 20 || side == -1 && quantity >= -20)
        {
-          Assert.That(_state.Orders.ContainsKey(newId), Is.False); 
+          Assert.That(_marketState.TryGetOrder(newId, out _), Is.False); 
        }
    }
    
@@ -145,12 +145,12 @@ public class TestMarket
        var existingId = NewOrder("A", "userA", 10, -100 * side)!.Value;
        var newId = NewOrder("A", "userE", 10, 50 * side)!.Value;
 
-       var quantityAtLevel = _state.Orders.Values.Where(o => o.Price == 10).Sum(o => o.Quantity);
+       var quantityAtLevel = _marketState.Orders.Where(o => o.Price == 10).Sum(o => o.Quantity);
        
        Assert.That(quantityAtLevel, Is.EqualTo(- side * 50));
 
-       Assert.That(_state.Orders.ContainsKey(newId), Is.False); 
-       Assert.That(_state.Orders.ContainsKey(existingId), Is.True); 
+       Assert.That(_marketState.TryGetOrder(newId, out _), Is.False); 
+       Assert.That(_marketState.TryGetOrder(existingId, out _), Is.True); 
    }
 
    internal record SimpleOrderRequest(string User, int Price, int Quantity);
@@ -158,7 +158,7 @@ public class TestMarket
 
    private void AssertAtPrice(int price, int quantity, int nOrders)
    {
-       var ordersAtPrice = _state.Orders.Values.Where(o => o.Price == price).ToList();
+       var ordersAtPrice = _marketState.Orders.Where(o => o.Price == price).ToList();
        
        var quantityAtLevel = ordersAtPrice.Sum(o => o.Quantity);
        Assert.That(quantityAtLevel, Is.EqualTo(quantity));
@@ -189,13 +189,13 @@ public class TestMarket
        
        events.ForEach(e =>
        {
-           var format = _state.ToString();
+           var format = _marketState.ToString();
            Console.WriteLine(format);
            NewOrder("symbol", e.User, e.Price, e.Quantity);
        });
        
-       Console.WriteLine(_state.ToString());
-       Assert.That(_state.Orders, Is.Empty);
+       Console.WriteLine(_marketState.ToString());
+       Assert.That(_marketState.Orders, Is.Empty);
    }
    
    
@@ -219,14 +219,14 @@ public class TestMarket
        
        events.ForEach(e =>
        {
-           var format = _state.ToString();
+           var format = _marketState.ToString();
            Console.WriteLine(format);
            NewOrder("symbol", e.User, e.Price, e.Quantity);
        });
        
-       Console.WriteLine(_state.ToString());
+       Console.WriteLine(_marketState.ToString());
         
-       Assert.That(_state.Orders, Is.Empty);
+       Assert.That(_marketState.Orders, Is.Empty);
    }
    
    
@@ -253,7 +253,7 @@ public class TestMarket
        
        events.ForEach(e =>
        {
-           var format = _state.ToString();
+           var format = _marketState.ToString();
            Console.WriteLine(format);
            if (e is SimpleOrderRequest so)
            {
@@ -267,8 +267,8 @@ public class TestMarket
            }
        });
        
-       Console.WriteLine(_state.ToString());
+       Console.WriteLine(_marketState.ToString());
         
-       Assert.That(_state.Orders, Is.Empty);
+       Assert.That(_marketState.Orders, Is.Empty);
    }
 }
